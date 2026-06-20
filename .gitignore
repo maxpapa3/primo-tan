@@ -1,0 +1,11 @@
+.pycache/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.env.*
+mac_mini/audio/*
+!mac_mini/audio/.gitkeep
+mac_mini/images/*
+!mac_mini/images/.gitkeep
+tmp/
