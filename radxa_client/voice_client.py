@@ -143,6 +143,14 @@ def play_audio(path: Path, device: str | None = None) -> None:
     subprocess.run(command, check=False)
 
 
+def talk_payload(text: str, meta: dict | None = None) -> dict:
+    payload = {"text": text, "meta": meta or {}}
+    image_b64 = latest_camera_b64()
+    if image_b64:
+        payload["image_b64"] = image_b64
+    return payload
+
+
 def clear_text_after_delay(face: bool, delay: float = 3.0) -> None:
     if not face:
         return
@@ -303,6 +311,55 @@ def fixed_recording(seconds: float, output_path: Path, device: str, rate: int, f
     return True
 
 
+def display_and_play_reply(
+    reply: dict,
+    question: str,
+    playback_device: str | None,
+    no_play: bool,
+    face: bool,
+) -> int:
+    if not reply.get("ok", False):
+        print(json.dumps(reply, ensure_ascii=False), file=sys.stderr)
+        start_face("sad", face)
+        return 1
+
+    emotion = reply.get("emotion", "neutral")
+    text = reply.get("text", "")
+    print(f"[{emotion}] {text}")
+
+    audio_url = reply.get("audio_url")
+    if audio_url:
+        print(f"audio: {audio_url}")
+    if audio_url and not no_play:
+        with tempfile.TemporaryDirectory() as tmp:
+            audio_path = Path(tmp) / "reply.wav"
+            download(str(audio_url), audio_path)
+            start_face("speaking", face, question, str(text))
+            play_audio(audio_path, playback_device)
+            start_face("idle", face, question, str(text))
+            clear_text_after_delay(face)
+    else:
+        start_face("idle", face, question, str(text))
+        clear_text_after_delay(face)
+    return 0
+
+
+def send_spontaneous(server: str, playback_device: str | None, no_play: bool, face: bool) -> int:
+    base_url = server.rstrip("/") + "/"
+    talk_url = urljoin(base_url, "talk")
+    prompt = "いま見えているものや今の気分について、短い独り言をひとつ言ってください。"
+    meta = {"source": "spontaneous", "client": "radxa", "camera": "raspi"}
+    try:
+        reply = post_json(talk_url, talk_payload(prompt, meta))
+    except HTTPError as exc:
+        print(f"server returned HTTP {exc.code}", file=sys.stderr)
+        return 1
+    except URLError as exc:
+        print(f"cannot reach server: {exc.reason}", file=sys.stderr)
+        return 1
+    return display_and_play_reply(reply, "ひとりごと", playback_device, no_play, face)
+
+
 def send_and_play(server: str, wav_path: Path, playback_device: str | None, no_play: bool, face: bool) -> int:
     base_url = server.rstrip("/") + "/"
     transcribe_url = urljoin(base_url, "transcribe-audio")
@@ -325,10 +382,7 @@ def send_and_play(server: str, wav_path: Path, playback_device: str | None, no_p
             clear_text_after_delay(face)
             return 0
 
-        payload = {"text": transcript, "meta": {"source": "audio", "client": "radxa", "camera": "raspi"}}
-        image_b64 = latest_camera_b64()
-        if image_b64:
-            payload["image_b64"] = image_b64
+        payload = talk_payload(transcript, {"source": "audio", "client": "radxa", "camera": "raspi"})
         reply = post_json(talk_url, payload)
         reply["transcript"] = transcript
     except HTTPError as exc:
@@ -348,31 +402,8 @@ def send_and_play(server: str, wav_path: Path, playback_device: str | None, no_p
         print(f"cannot reach server: {exc.reason}", file=sys.stderr)
         return 1
 
-    if not reply.get("ok", False):
-        print(json.dumps(reply, ensure_ascii=False), file=sys.stderr)
-        start_face("sad", face)
-        return 1
-
     transcript = reply.get("transcript", "")
-    emotion = reply.get("emotion", "neutral")
-    text = reply.get("text", "")
-    print(f"[{emotion}] {text}")
-
-    audio_url = reply.get("audio_url")
-    if audio_url:
-        print(f"audio: {audio_url}")
-    if audio_url and not no_play:
-        with tempfile.TemporaryDirectory() as tmp:
-            audio_path = Path(tmp) / "reply.wav"
-            download(str(audio_url), audio_path)
-            start_face("speaking", face, str(transcript), str(text))
-            play_audio(audio_path, playback_device)
-            start_face("idle", face, str(transcript), str(text))
-            clear_text_after_delay(face)
-    else:
-        start_face("idle", face, str(transcript), str(text))
-        clear_text_after_delay(face)
-    return 0
+    return display_and_play_reply(reply, str(transcript), playback_device, no_play, face)
 
 
 def run_interaction(args: argparse.Namespace) -> int:

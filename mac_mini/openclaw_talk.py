@@ -264,6 +264,10 @@ def main() -> int:
         print(json.dumps({"text": "聞こえませんでした。もう一度お願いします。", "emotion": "confused"}, ensure_ascii=False))
         return 0
 
+    meta = payload.get("meta", {})
+    if not isinstance(meta, dict):
+        meta = {}
+    spontaneous = meta.get("source") == "spontaneous"
     image_path = image_path_from_payload(payload)
     vision_instruction = (
         "この会話にはカメラ画像も添えられています。"
@@ -273,15 +277,29 @@ def main() -> int:
         else ""
     )
 
-    prompt = (
+    persona = (
         "あなたの名前は「プリモたん」です。"
         "あなたは手のひらサイズのコミュニケーションデバイスに住む、やさしいAIマスコットです。"
         "一人称は自然に「プリモたん」または「私」を使ってください。"
-        "日本語で、あたたかく自然で短く、1〜2文で返答してください。"
+        "日本語で、あたたかく自然で短く話してください。"
         "操作説明や内部事情は不要です。"
-        f"{vision_instruction}\n\n"
-        f"ユーザー: {user_text}"
     )
+    if spontaneous:
+        prompt = (
+            f"{persona}"
+            "これはユーザーからの質問ではなく、プリモたんが自分から小さくつぶやく場面です。"
+            "今の気分、見えているものから感じたこと、ちょっとした気づきのどれかを、独り言として1文だけ話してください。"
+            "ユーザーに返事を求めたり、毎回あいさつしたりしないでください。"
+            f"{vision_instruction}\n\n"
+            f"きっかけ: {user_text}"
+        )
+    else:
+        prompt = (
+            f"{persona}"
+            "ユーザーへの返答は1〜2文にしてください。"
+            f"{vision_instruction}\n\n"
+            f"ユーザー: {user_text}"
+        )
 
     try:
         started = time.monotonic()

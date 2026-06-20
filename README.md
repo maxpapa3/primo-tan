@@ -173,6 +173,18 @@ OFF中: コンソール画面を表示
 ON中: コンソールを消してプリモたんの顔だけ表示
 ```
 
+プリモたんON中は、録音していないアイドル時間に約45〜90秒間隔で短い独り言を話します。カメラ画像が取れていれば、見えているものから感じたことも自然に混ぜます。
+頻度を変える場合はRadxa側の `primo_supervisor.py` に渡す引数で調整できます。
+
+```bash
+python3 primo_supervisor.py \
+  --server http://<Mac miniのIP>:8765 \
+  --monologue-min-seconds 30 \
+  --monologue-max-seconds 60
+```
+
+止めたい場合は `--no-monologue` を付けます。
+
 停止:
 
 ```bash
