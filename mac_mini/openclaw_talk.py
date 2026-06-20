@@ -268,6 +268,16 @@ def main() -> int:
     if not isinstance(meta, dict):
         meta = {}
     spontaneous = meta.get("source") == "spontaneous"
+    if meta.get("source") == "shutdown_confirm":
+        text = "シャットダウンしますか？ はい、と言うとシャットダウンします。"
+        spoken_text = speech_text(text)
+        response = {"text": text, "tts_text": spoken_text, "emotion": "curious"}
+        audio_url = maybe_create_audio(text, spoken_text)
+        if audio_url:
+            response["audio_url"] = audio_url
+        print(json.dumps(response, ensure_ascii=False))
+        return 0
+
     image_path = image_path_from_payload(payload)
     vision_instruction = (
         "この会話にはカメラ画像も添えられています。"

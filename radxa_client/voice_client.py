@@ -151,6 +151,16 @@ def talk_payload(text: str, meta: dict | None = None) -> dict:
     return payload
 
 
+def transcribe_audio(server: str, wav_path: Path) -> str:
+    base_url = server.rstrip("/") + "/"
+    transcribe_url = urljoin(base_url, "transcribe-audio")
+    transcribed = post_audio(transcribe_url, wav_path)
+    if not transcribed.get("ok", False):
+        print(json.dumps(transcribed, ensure_ascii=False), file=sys.stderr)
+        return ""
+    return str(transcribed.get("transcript", "")).strip()
+
+
 def clear_text_after_delay(face: bool, delay: float = 3.0) -> None:
     if not face:
         return
@@ -317,6 +327,7 @@ def display_and_play_reply(
     playback_device: str | None,
     no_play: bool,
     face: bool,
+    clear_after: bool = True,
 ) -> int:
     if not reply.get("ok", False):
         print(json.dumps(reply, ensure_ascii=False), file=sys.stderr)
@@ -337,10 +348,12 @@ def display_and_play_reply(
             start_face("speaking", face, question, str(text))
             play_audio(audio_path, playback_device)
             start_face("idle", face, question, str(text))
-            clear_text_after_delay(face)
+            if clear_after:
+                clear_text_after_delay(face)
     else:
         start_face("idle", face, question, str(text))
-        clear_text_after_delay(face)
+        if clear_after:
+            clear_text_after_delay(face)
     return 0
 
 
@@ -362,17 +375,10 @@ def send_spontaneous(server: str, playback_device: str | None, no_play: bool, fa
 
 def send_and_play(server: str, wav_path: Path, playback_device: str | None, no_play: bool, face: bool) -> int:
     base_url = server.rstrip("/") + "/"
-    transcribe_url = urljoin(base_url, "transcribe-audio")
     talk_url = urljoin(base_url, "talk")
     talk_audio_url = urljoin(base_url, "talk-audio")
     try:
-        transcribed = post_audio(transcribe_url, wav_path)
-        if not transcribed.get("ok", False):
-            print(json.dumps(transcribed, ensure_ascii=False), file=sys.stderr)
-            start_face("sad", face)
-            return 1
-
-        transcript = str(transcribed.get("transcript", ""))
+        transcript = transcribe_audio(server, wav_path)
         print(f"you: {transcript}")
         if transcript:
             start_face("thinking", face, transcript, "")

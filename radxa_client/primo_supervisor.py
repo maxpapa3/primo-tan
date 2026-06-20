@@ -16,7 +16,9 @@ import time
 from pathlib import Path
 
 from voice_client import (
+    display_and_play_reply,
     gpio_value_reader,
+    post_json,
     send_and_play,
     send_spontaneous,
     start_face,
@@ -24,6 +26,8 @@ from voice_client import (
     stop_camera,
     stop_face,
     stop_recording,
+    talk_payload,
+    transcribe_audio,
 )
 
 
@@ -35,13 +39,15 @@ class PrimoSupervisor:
     def __init__(self, args: argparse.Namespace):
         self.args = args
         self.active = bool(args.start_active)
-        self.last_short_click_at = 0.0
+        self.click_count = 0
+        self.click_deadline = 0.0
         self.recording_process: subprocess.Popen | None = None
         self.recording_path: Path | None = None
         self.press_started_at = 0.0
         self.hold_recording_started = False
         self.monologue_thread: threading.Thread | None = None
         self.next_monologue_at = 0.0
+        self.shutdown_confirming = False
 
     def set_active(self, active: bool) -> None:
         if self.active == active:
@@ -73,6 +79,10 @@ class PrimoSupervisor:
 
     def toggle(self) -> None:
         self.set_active(not self.active)
+
+    def reset_clicks(self) -> None:
+        self.click_count = 0
+        self.click_deadline = 0.0
 
     def cancel_recording(self) -> None:
         if self.recording_process is not None:
@@ -122,6 +132,7 @@ class PrimoSupervisor:
             and button_value == 0
             and self.recording_process is None
             and not self.hold_recording_started
+            and not self.shutdown_confirming
             and not self.monologue_running()
             and self.next_monologue_at > 0
             and now >= self.next_monologue_at
@@ -129,9 +140,10 @@ class PrimoSupervisor:
             self.start_spontaneous_monologue()
 
     def start_hold_recording(self) -> None:
-        if not self.active or self.recording_process is not None or self.monologue_running():
+        if not self.active or self.shutdown_confirming or self.recording_process is not None or self.monologue_running():
             return
         self.schedule_next_monologue()
+        self.reset_clicks()
         tmpdir = tempfile.TemporaryDirectory()
         # Keep a reference on the object via the process so the directory survives.
         wav_path = Path(tmpdir.name) / "utterance.wav"
@@ -164,21 +176,94 @@ class PrimoSupervisor:
         if tmpdir is not None:
             tmpdir.cleanup()
 
+    def shutdown_prompt(self) -> dict:
+        from urllib.parse import urljoin
+
+        talk_url = urljoin(self.args.server.rstrip("/") + "/", "talk")
+        return post_json(talk_url, talk_payload("シャットダウンしますか？", {"source": "shutdown_confirm", "client": "radxa"}))
+
+    def is_yes(self, text: str) -> bool:
+        normalized = text.strip().replace(" ", "").replace("　", "")
+        yes_words = ("はい", "ハイ", "うん", "ウン", "お願い", "おねがい", "シャットダウンして", "電源切って")
+        no_words = ("いいえ", "いや", "やめ", "キャンセル", "しない", "ない", "だめ", "待って")
+        return any(word in normalized for word in yes_words) and not any(word in normalized for word in no_words)
+
+    def record_shutdown_answer(self) -> str:
+        with tempfile.TemporaryDirectory() as tmp:
+            wav_path = Path(tmp) / "shutdown-answer.wav"
+            start_face("listening", True, "シャットダウンしますか？", "はい、と言うとシャットダウンします。")
+            process = start_recording(wav_path, self.args.capture_device, self.args.rate)
+            time.sleep(self.args.shutdown_answer_seconds)
+            stop_recording(process)
+            if not wav_path.exists() or wav_path.stat().st_size < 1024:
+                return ""
+            start_face("thinking", True, "シャットダウンしますか？", "")
+            return transcribe_audio(self.args.server, wav_path)
+
+    def request_shutdown_confirmation(self) -> None:
+        if self.shutdown_confirming:
+            return
+        was_active = self.active
+        self.shutdown_confirming = True
+        self.cancel_recording()
+        self.next_monologue_at = 0.0
+        print("Shutdown confirmation requested", flush=True)
+        try:
+            if not was_active:
+                console_mode("mascot")
+            start_face("thinking", True, "確認", "シャットダウンしますか？")
+            try:
+                reply = self.shutdown_prompt()
+                display_and_play_reply(reply, "確認", self.args.playback_device, self.args.no_play, True, clear_after=False)
+            except Exception as exc:
+                print(f"shutdown prompt failed: {exc}", flush=True)
+                start_face("idle", True, "確認", "シャットダウンしますか？ はい、と言うとシャットダウンします。")
+
+            answer = self.record_shutdown_answer()
+            print(f"shutdown answer: {answer}", flush=True)
+            if self.is_yes(answer):
+                start_face("speaking", True, "確認", "シャットダウンします。")
+                subprocess.Popen(["sudo", "-n", "/sbin/shutdown", "-h", "now"])
+                return
+
+            start_face("idle", True, "確認", "シャットダウンしません。")
+            time.sleep(1.5)
+        finally:
+            self.shutdown_confirming = False
+            self.reset_clicks()
+            if was_active:
+                start_face("idle", True)
+                self.schedule_next_monologue(initial=True)
+            else:
+                stop_face()
+                stop_camera()
+                console_mode("console")
+
     def handle_release(self) -> None:
         now = time.monotonic()
         press_duration = now - self.press_started_at
 
         if self.hold_recording_started:
             self.finish_recording()
-            self.last_short_click_at = 0.0
+            self.reset_clicks()
             return
 
         if press_duration <= self.args.click_max_seconds:
-            if now - self.last_short_click_at <= self.args.double_click_seconds:
-                self.last_short_click_at = 0.0
-                self.toggle()
-            else:
-                self.last_short_click_at = now
+            if self.click_count and now > self.click_deadline:
+                self.reset_clicks()
+            self.click_count += 1
+            self.click_deadline = now + self.args.multi_click_seconds
+            if self.click_count >= 3:
+                self.reset_clicks()
+                self.request_shutdown_confirmation()
+
+    def maybe_finish_click_sequence(self, now: float) -> None:
+        if self.click_count == 0 or now < self.click_deadline:
+            return
+        count = self.click_count
+        self.reset_clicks()
+        if count == 2:
+            self.toggle()
 
     def run(self) -> None:
         self.initialize_state()
@@ -207,6 +292,8 @@ class PrimoSupervisor:
                 ):
                     self.start_hold_recording()
 
+                if value == 0:
+                    self.maybe_finish_click_sequence(now)
                 self.maybe_start_spontaneous_monologue(value, now)
                 time.sleep(0.01)
         finally:
@@ -230,7 +317,8 @@ def main() -> None:
     parser.add_argument("--hold-to-record-seconds", type=float, default=0.45)
     parser.add_argument("--min-record-seconds", type=float, default=0.6)
     parser.add_argument("--click-max-seconds", type=float, default=0.32)
-    parser.add_argument("--double-click-seconds", type=float, default=0.65)
+    parser.add_argument("--multi-click-seconds", type=float, default=0.65)
+    parser.add_argument("--shutdown-answer-seconds", type=float, default=3.0)
     parser.add_argument("--monologue-min-seconds", type=float, default=45.0)
     parser.add_argument("--monologue-max-seconds", type=float, default=90.0)
     parser.add_argument("--no-monologue", action="store_true")
