@@ -1,6 +1,7 @@
 # プリモたん AI Communication Device
 
 Mac miniを頭脳、Radxa Zero 3Wを小型表示・音声端末として使うコミュニケーションデバイス「プリモたん」の実験実装です。
+プリモたんは、敬語を使わない幼い女の子のような口調で、短くやわらかく話します。
 
 ```text
 Telegram / cron / X
