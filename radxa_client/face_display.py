@@ -213,6 +213,73 @@ def draw_text_overlay(canvas: Image.Image, question: str | None, answer: str | N
         )
 
 
+def draw_plush_eye(draw: ImageDraw.ImageDraw, ex: float, eye_y: float, side: int, scale: int, blink: bool) -> None:
+    outline = (13, 18, 34)
+    lash = (16, 19, 35)
+    iris = (110, 205, 222)
+    iris_dark = (48, 116, 154)
+    highlight = (230, 252, 255)
+    accent = (176, 87, 62)
+
+    if blink:
+        line(draw, [(ex - 22 * scale, eye_y), (ex + 21 * scale, eye_y - 2 * scale)], outline, width=3 * scale)
+        for i in range(3):
+            lx = ex + side * (-8 + i * 8) * scale
+            line(draw, [(lx, eye_y), (lx + side * 3 * scale, eye_y + 7 * scale)], lash, width=1 * scale)
+        return
+
+    # Angular embroidered eye outline.
+    points = [
+        (ex - 22 * scale, eye_y - 15 * scale),
+        (ex - 6 * scale, eye_y - 23 * scale),
+        (ex + 20 * scale, eye_y - 17 * scale),
+        (ex + 23 * scale, eye_y + 6 * scale),
+        (ex + 8 * scale, eye_y + 21 * scale),
+        (ex - 18 * scale, eye_y + 17 * scale),
+        (ex - 25 * scale, eye_y - 2 * scale),
+    ]
+    draw.polygon(points, fill=(216, 235, 239), outline=outline)
+    line(draw, points + [points[0]], outline, width=2 * scale)
+
+    # Thick upper eyelid and warm stitch above the eye.
+    line(
+        draw,
+        [
+            (ex - 25 * scale, eye_y - 18 * scale),
+            (ex - 8 * scale, eye_y - 26 * scale),
+            (ex + 23 * scale, eye_y - 19 * scale),
+        ],
+        lash,
+        width=4 * scale,
+    )
+    line(
+        draw,
+        [
+            (ex - 17 * scale, eye_y - 27 * scale),
+            (ex - 3 * scale, eye_y - 30 * scale),
+            (ex + 16 * scale, eye_y - 25 * scale),
+        ],
+        accent,
+        width=1 * scale,
+    )
+
+    # Large stitched iris.
+    ellipse(draw, (ex - 15 * scale, eye_y - 17 * scale, ex + 15 * scale, eye_y + 18 * scale), iris_dark)
+    ellipse(draw, (ex - 11 * scale, eye_y - 14 * scale, ex + 11 * scale, eye_y + 15 * scale), iris)
+    ellipse(draw, (ex - 4 * scale, eye_y - 12 * scale, ex + 5 * scale, eye_y + 13 * scale), outline)
+    ellipse(draw, (ex - 8 * scale, eye_y - 10 * scale, ex - 3 * scale, eye_y - 5 * scale), highlight)
+    ellipse(draw, (ex + 5 * scale, eye_y + 7 * scale, ex + 9 * scale, eye_y + 11 * scale), (170, 235, 245))
+
+    # Lower lashes and plush stitch dots.
+    for offset in (-17, -5, 8, 19):
+        lx = ex + offset * scale
+        line(draw, [(lx, eye_y + 19 * scale), (lx + side * 4 * scale, eye_y + 27 * scale)], lash, width=1 * scale)
+    for dx, dy in [(-25, 20), (-20, 29), (22, 18), (27, 27)]:
+        dot_x = ex + dx * scale
+        dot_y = eye_y + dy * scale
+        ellipse(draw, (dot_x - 1.4 * scale, dot_y - 1.4 * scale, dot_x + 1.4 * scale, dot_y + 1.4 * scale), lash)
+
+
 def draw_face(
     width: int,
     height: int,
@@ -285,9 +352,9 @@ def draw_face(
     draw.polygon([(cx + 50 * scale, cy + 55 * scale), (cx + 12 * scale, cy + 93 * scale), (cx + 6 * scale, h + 20 * scale)], fill=(15, 18, 30))
 
     # Hair silhouette and long side strands.
-    hair_shadow = (8, 10, 21)
-    hair_mid = (20, 24, 44)
-    hair_light = (61, 82, 128)
+    hair_shadow = (15, 25, 50)
+    hair_mid = (28, 43, 78)
+    hair_light = (74, 109, 145)
     ellipse(draw, (cx - 74 * scale, cy - 101 * scale + bob, cx + 74 * scale, cy + 46 * scale + bob), hair_shadow)
     draw.polygon(
         [
@@ -309,7 +376,7 @@ def draw_face(
     )
 
     # Face.
-    ellipse(draw, (cx - 51 * scale, cy - 62 * scale + bob, cx + 51 * scale, cy + 54 * scale + bob), (225, 211, 221))
+    ellipse(draw, (cx - 53 * scale, cy - 63 * scale + bob, cx + 53 * scale, cy + 55 * scale + bob), (238, 226, 184))
 
     # Bangs drawn over the face.
     draw.polygon(
@@ -328,7 +395,7 @@ def draw_face(
             (cx - 4 * scale, cy - 5 * scale + bob),
             (cx - 36 * scale, cy - 18 * scale + bob),
         ],
-        fill=(13, 16, 31),
+        fill=(18, 29, 55),
     )
     draw.polygon(
         [
@@ -337,36 +404,30 @@ def draw_face(
             (cx + 35 * scale, cy + 6 * scale + bob),
             (cx + 6 * scale, cy - 15 * scale + bob),
         ],
-        fill=(16, 19, 35),
+        fill=(23, 36, 66),
     )
     line(draw, [(cx - 62 * scale, cy - 44 * scale + bob), (cx - 99 * scale, cy + 16 * scale), (cx - 94 * scale, cy + 78 * scale)], hair_light, width=1 * scale)
     line(draw, [(cx + 54 * scale, cy - 40 * scale + bob), (cx + 88 * scale, cy + 22 * scale), (cx + 82 * scale, cy + 88 * scale)], hair_light, width=1 * scale)
 
-    # Eyes and brows.
-    eye_y = cy - 16 * scale + bob
+    # Large plush-style embroidered eyes and brows.
+    eye_y = cy - 13 * scale + bob
     for side in (-1, 1):
-        ex = cx + side * 24 * scale
-        if blink:
-            line(draw, [(ex - 15 * scale, eye_y), (ex + 15 * scale, eye_y - 2 * scale)], (31, 35, 54), width=2 * scale)
-        else:
-            line(draw, [(ex - 16 * scale, eye_y - 3 * scale), (ex + 14 * scale, eye_y - 1 * scale)], (24, 27, 43), width=2 * scale)
-            ellipse(draw, (ex - 10 * scale, eye_y - 7 * scale, ex + 10 * scale, eye_y + 9 * scale), (67, 101, 143))
-            ellipse(draw, (ex - 5 * scale, eye_y - 4 * scale, ex + 5 * scale, eye_y + 7 * scale), (18, 24, 39))
-            ellipse(draw, (ex + 1 * scale, eye_y - 4 * scale, ex + 5 * scale, eye_y), (224, 242, 255))
-    brow_y = cy - 37 * scale + bob
-    line(draw, [(cx - 42 * scale, brow_y), (cx - 19 * scale, brow_y - 6 * scale)], (27, 30, 47), width=2 * scale)
-    line(draw, [(cx + 19 * scale, brow_y - 6 * scale), (cx + 42 * scale, brow_y)], (27, 30, 47), width=2 * scale)
+        ex = cx + side * 27 * scale
+        draw_plush_eye(draw, ex, eye_y, side, scale, blink)
+    brow_y = cy - 47 * scale + bob
+    line(draw, [(cx - 44 * scale, brow_y), (cx - 20 * scale, brow_y - 7 * scale)], (18, 21, 36), width=2 * scale)
+    line(draw, [(cx + 20 * scale, brow_y - 7 * scale), (cx + 44 * scale, brow_y)], (18, 21, 36), width=2 * scale)
 
     # Nose and mouth.
-    line(draw, [(cx + 2 * scale, cy - 4 * scale + bob), (cx - 2 * scale, cy + 12 * scale + bob)], (168, 141, 153), width=1 * scale)
-    mouth_y = cy + 33 * scale + bob
+    line(draw, [(cx + 2 * scale, cy + 3 * scale + bob), (cx - 2 * scale, cy + 17 * scale + bob)], (168, 141, 153), width=1 * scale)
+    mouth_y = cy + 41 * scale + bob
     if state == "speaking":
         mh = (4 + 7 * abs(math.sin(phase * math.tau * 2))) * scale
         ellipse(draw, (cx - 10 * scale, mouth_y - mh / 2, cx + 10 * scale, mouth_y + mh), (94, 28, 48))
     elif state == "sad":
-        line(draw, [(cx - 14 * scale, mouth_y + 4 * scale), (cx, mouth_y), (cx + 14 * scale, mouth_y + 4 * scale)], (85, 36, 57), width=2 * scale)
+        line(draw, [(cx - 12 * scale, mouth_y + 4 * scale), (cx, mouth_y), (cx + 12 * scale, mouth_y + 4 * scale)], (42, 46, 66), width=2 * scale)
     else:
-        line(draw, [(cx - 14 * scale, mouth_y), (cx + 13 * scale, mouth_y - 2 * scale)], (85, 36, 57), width=2 * scale)
+        line(draw, [(cx - 10 * scale, mouth_y), (cx - 3 * scale, mouth_y - 4 * scale), (cx + 8 * scale, mouth_y - 2 * scale)], (42, 46, 66), width=2 * scale)
 
     # Blue rose tie.
     rose_x = cx
