@@ -241,17 +241,21 @@ def draw_plush_eye(draw: ImageDraw.ImageDraw, ex: float, eye_y: float, side: int
     draw.polygon(points, fill=(216, 235, 239), outline=outline)
     line(draw, points + [points[0]], outline, width=2 * scale)
 
-    # Thick upper eyelid and warm stitch above the eye.
+    # Clean upper lashes and warm stitch above the eye.
     line(
         draw,
         [
             (ex - 26 * scale, eye_y - 13 * scale),
-            (ex - 8 * scale, eye_y - 21 * scale),
-            (ex + 24 * scale, eye_y - 14 * scale),
+            (ex - 8 * scale, eye_y - 19 * scale),
+            (ex + 24 * scale, eye_y - 13 * scale),
         ],
         lash,
-        width=5 * scale,
+        width=2 * scale,
     )
+    for offset, length in [(-22, 8), (-13, 6), (17, 7), (24, 9)]:
+        lx = ex + offset * scale
+        ly = eye_y - (12 if offset < 0 else 11) * scale
+        line(draw, [(lx, ly), (lx + side * length * scale, ly - 5 * scale)], lash, width=1 * scale)
     line(
         draw,
         [
@@ -270,16 +274,16 @@ def draw_plush_eye(draw: ImageDraw.ImageDraw, ex: float, eye_y: float, side: int
     ellipse(draw, (ex - 8 * scale, eye_y - 8 * scale, ex - 3 * scale, eye_y - 4 * scale), highlight)
     ellipse(draw, (ex + 5 * scale, eye_y + 5 * scale, ex + 9 * scale, eye_y + 9 * scale), (170, 235, 245))
 
-    # Heavy plush eyelid shadow: makes the eye large but not wide open.
+    # Plush eyelid shadow: makes the eye large but not wide open.
     draw.polygon(
         [
             (ex - 24 * scale, eye_y - 14 * scale),
-            (ex - 6 * scale, eye_y - 21 * scale),
+            (ex - 6 * scale, eye_y - 20 * scale),
             (ex + 23 * scale, eye_y - 14 * scale),
-            (ex + 14 * scale, eye_y - 8 * scale),
-            (ex - 12 * scale, eye_y - 11 * scale),
+            (ex + 18 * scale, eye_y - 11 * scale),
+            (ex - 15 * scale, eye_y - 11 * scale),
         ],
-        fill=lash,
+        fill=(18, 22, 39),
     )
     line(draw, [(ex - 22 * scale, eye_y - 8 * scale), (ex + 20 * scale, eye_y - 7 * scale)], lash, width=2 * scale)
 
@@ -412,28 +416,37 @@ def draw_face(
     # Bangs drawn over the face.
     draw.polygon(
         [
-            (cx - 67 * scale, cy - 84 * scale + bob),
-            (cx - 21 * scale, cy - 64 * scale + bob),
-            (cx - 45 * scale, cy - 4 * scale + bob),
-            (cx - 80 * scale, cy - 14 * scale + bob),
+            (cx - 68 * scale, cy - 84 * scale + bob),
+            (cx - 24 * scale, cy - 65 * scale + bob),
+            (cx - 55 * scale, cy - 10 * scale + bob),
+            (cx - 83 * scale, cy - 15 * scale + bob),
         ],
         fill=hair_shadow,
     )
     draw.polygon(
         [
-            (cx - 29 * scale, cy - 77 * scale + bob),
-            (cx + 18 * scale, cy - 67 * scale + bob),
-            (cx - 4 * scale, cy - 5 * scale + bob),
-            (cx - 36 * scale, cy - 18 * scale + bob),
+            (cx - 18 * scale, cy - 79 * scale + bob),
+            (cx + 10 * scale, cy - 70 * scale + bob),
+            (cx - 2 * scale, cy - 37 * scale + bob),
+            (cx - 18 * scale, cy - 40 * scale + bob),
         ],
         fill=(18, 29, 55),
     )
     draw.polygon(
         [
-            (cx + 13 * scale, cy - 70 * scale + bob),
-            (cx + 60 * scale, cy - 47 * scale + bob),
-            (cx + 35 * scale, cy + 6 * scale + bob),
-            (cx + 6 * scale, cy - 15 * scale + bob),
+            (cx + 4 * scale, cy - 72 * scale + bob),
+            (cx + 25 * scale, cy - 63 * scale + bob),
+            (cx + 18 * scale, cy - 38 * scale + bob),
+            (cx + 6 * scale, cy - 44 * scale + bob),
+        ],
+        fill=(19, 31, 58),
+    )
+    draw.polygon(
+        [
+            (cx + 22 * scale, cy - 68 * scale + bob),
+            (cx + 62 * scale, cy - 46 * scale + bob),
+            (cx + 46 * scale, cy - 2 * scale + bob),
+            (cx + 18 * scale, cy - 23 * scale + bob),
         ],
         fill=(23, 36, 66),
     )
@@ -445,9 +458,9 @@ def draw_face(
     for side in (-1, 1):
         ex = cx + side * 31 * scale
         draw_plush_eye(draw, ex, eye_y, side, scale, blink)
-    brow_y = cy - 47 * scale + bob
-    line(draw, [(cx - 44 * scale, brow_y), (cx - 20 * scale, brow_y - 7 * scale)], (18, 21, 36), width=2 * scale)
-    line(draw, [(cx + 20 * scale, brow_y - 7 * scale), (cx + 44 * scale, brow_y)], (18, 21, 36), width=2 * scale)
+    brow_y = cy - 48 * scale + bob
+    line(draw, [(cx - 45 * scale, brow_y), (cx - 22 * scale, brow_y - 6 * scale)], (26, 29, 48), width=1 * scale)
+    line(draw, [(cx + 22 * scale, brow_y - 6 * scale), (cx + 45 * scale, brow_y)], (26, 29, 48), width=1 * scale)
 
     # Nose and mouth.
     line(draw, [(cx + 2 * scale, cy + 3 * scale + bob), (cx - 2 * scale, cy + 17 * scale + bob)], (168, 141, 153), width=1 * scale)
