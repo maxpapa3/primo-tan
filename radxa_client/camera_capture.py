@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Continuously capture a small camera preview frame for Primo-tan."""
+"""Continuously capture a small camera preview frame for the AI mascot."""
 
 from __future__ import annotations
 

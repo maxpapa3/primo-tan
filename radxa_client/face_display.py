@@ -231,13 +231,17 @@ def draw_face(
     cx = w / 2 - (34 * scale if camera_image else 0)
     cy = h / 2
 
-    # Soft pastel background.
+    # Dark blue stage-like background.
     for y in range(h):
         t = y / max(1, h - 1)
-        r = int(245 * (1 - t) + 215 * t)
-        g = int(236 * (1 - t) + 245 * t)
-        b = int(255 * (1 - t) + 250 * t)
+        r = int(18 * (1 - t) + 42 * t)
+        g = int(24 * (1 - t) + 32 * t)
+        b = int(48 * (1 - t) + 78 * t)
         draw.line([(0, y), (w, y)], fill=(r, g, b))
+    for i in range(18):
+        sx = int((i * 37 + 19) % max(1, w))
+        sy = int((i * 53 + 31) % max(1, h))
+        ellipse(draw, (sx - 1 * scale, sy - 1 * scale, sx + 1 * scale, sy + 1 * scale), (58, 92, 132))
 
     pulse = 0.5 + 0.5 * math.sin(phase * math.tau)
     bob = math.sin(phase * math.tau) * 5 * scale
@@ -265,63 +269,119 @@ def draw_face(
             x = (22 + i * 9) * scale
             rounded_rectangle(draw, (x, h - 24 * scale - bar_h, x + 4 * scale, h - 24 * scale), 2 * scale, (120, 205, 235))
 
-    # Body and raised arm.
-    arm_angle = math.sin(phase * math.tau) * (0.12 if state in {"idle", "speaking"} else 0.06)
-    line(
-        draw,
+    # Shoulders, black jacket, and white shirt.
+    rounded_rectangle(draw, (cx - 82 * scale, cy + 52 * scale, cx + 82 * scale, h + 18 * scale), 28 * scale, (10, 13, 24))
+    draw.polygon(
         [
-            (cx - 62 * scale, cy + 42 * scale),
-            (cx - 100 * scale, cy + (15 + bob / scale) * scale),
-            (cx - 112 * scale, cy - (18 + arm_angle * 40) * scale),
+            (cx - 51 * scale, cy + 54 * scale),
+            (cx - 13 * scale, h + 12 * scale),
+            (cx, cy + 77 * scale),
+            (cx + 13 * scale, h + 12 * scale),
+            (cx + 51 * scale, cy + 54 * scale),
         ],
-        fill=(20, 24, 34),
-        width=25 * scale,
+        fill=(229, 234, 246),
     )
-    ellipse(draw, (cx - 133 * scale, cy - 40 * scale, cx - 101 * scale, cy - 8 * scale), (255, 239, 211))
-    rounded_rectangle(draw, (cx - 74 * scale, cy + 35 * scale, cx + 74 * scale, h + 34 * scale), 44 * scale, (22, 25, 34))
-    rounded_rectangle(draw, (cx - 47 * scale, cy + 54 * scale, cx + 47 * scale, h + 22 * scale), 38 * scale, (255, 239, 211))
+    draw.polygon([(cx - 50 * scale, cy + 55 * scale), (cx - 12 * scale, cy + 93 * scale), (cx - 6 * scale, h + 20 * scale)], fill=(15, 18, 30))
+    draw.polygon([(cx + 50 * scale, cy + 55 * scale), (cx + 12 * scale, cy + 93 * scale), (cx + 6 * scale, h + 20 * scale)], fill=(15, 18, 30))
 
-    # Ears and hood.
-    ellipse(draw, (cx - 105 * scale, cy - 43 * scale, cx - 70 * scale, cy - 4 * scale), (255, 238, 210))
-    ellipse(draw, (cx + 70 * scale, cy - 43 * scale, cx + 105 * scale, cy - 4 * scale), (255, 238, 210))
-    ellipse(draw, (cx + 42 * scale, cy - 112 * scale, cx + 83 * scale, cy - 70 * scale), (16, 18, 26))
-    ellipse(draw, (cx - 78 * scale, cy - 105 * scale + bob, cx + 78 * scale, cy + 52 * scale + bob), (15, 18, 27))
+    # Hair silhouette and long side strands.
+    hair_shadow = (8, 10, 21)
+    hair_mid = (20, 24, 44)
+    hair_light = (61, 82, 128)
+    ellipse(draw, (cx - 74 * scale, cy - 101 * scale + bob, cx + 74 * scale, cy + 46 * scale + bob), hair_shadow)
+    draw.polygon(
+        [
+            (cx - 75 * scale, cy - 62 * scale + bob),
+            (cx - 114 * scale, cy + 8 * scale),
+            (cx - 96 * scale, cy + 121 * scale),
+            (cx - 48 * scale, cy + 46 * scale + bob),
+        ],
+        fill=hair_mid,
+    )
+    draw.polygon(
+        [
+            (cx + 64 * scale, cy - 65 * scale + bob),
+            (cx + 105 * scale, cy + 18 * scale),
+            (cx + 90 * scale, cy + 116 * scale),
+            (cx + 42 * scale, cy + 42 * scale + bob),
+        ],
+        fill=hair_mid,
+    )
 
-    # Face patch.
-    ellipse(draw, (cx - 64 * scale, cy - 66 * scale + bob, cx + 64 * scale, cy + 53 * scale + bob), (255, 239, 211))
+    # Face.
+    ellipse(draw, (cx - 51 * scale, cy - 62 * scale + bob, cx + 51 * scale, cy + 54 * scale + bob), (225, 211, 221))
 
-    # Eyes.
-    eye_y = cy - 18 * scale + bob
+    # Bangs drawn over the face.
+    draw.polygon(
+        [
+            (cx - 67 * scale, cy - 84 * scale + bob),
+            (cx - 21 * scale, cy - 64 * scale + bob),
+            (cx - 45 * scale, cy - 4 * scale + bob),
+            (cx - 80 * scale, cy - 14 * scale + bob),
+        ],
+        fill=hair_shadow,
+    )
+    draw.polygon(
+        [
+            (cx - 29 * scale, cy - 77 * scale + bob),
+            (cx + 18 * scale, cy - 67 * scale + bob),
+            (cx - 4 * scale, cy - 5 * scale + bob),
+            (cx - 36 * scale, cy - 18 * scale + bob),
+        ],
+        fill=(13, 16, 31),
+    )
+    draw.polygon(
+        [
+            (cx + 13 * scale, cy - 70 * scale + bob),
+            (cx + 60 * scale, cy - 47 * scale + bob),
+            (cx + 35 * scale, cy + 6 * scale + bob),
+            (cx + 6 * scale, cy - 15 * scale + bob),
+        ],
+        fill=(16, 19, 35),
+    )
+    line(draw, [(cx - 62 * scale, cy - 44 * scale + bob), (cx - 99 * scale, cy + 16 * scale), (cx - 94 * scale, cy + 78 * scale)], hair_light, width=1 * scale)
+    line(draw, [(cx + 54 * scale, cy - 40 * scale + bob), (cx + 88 * scale, cy + 22 * scale), (cx + 82 * scale, cy + 88 * scale)], hair_light, width=1 * scale)
+
+    # Eyes and brows.
+    eye_y = cy - 16 * scale + bob
     for side in (-1, 1):
-        ex = cx + side * 29 * scale
+        ex = cx + side * 24 * scale
         if blink:
-            line(draw, [(ex - 12 * scale, eye_y), (ex + 12 * scale, eye_y)], (20, 24, 32), width=3 * scale)
+            line(draw, [(ex - 15 * scale, eye_y), (ex + 15 * scale, eye_y - 2 * scale)], (31, 35, 54), width=2 * scale)
         else:
-            ellipse(draw, (ex - 12 * scale, eye_y - 12 * scale, ex + 12 * scale, eye_y + 12 * scale), (14, 18, 26))
-            ellipse(draw, (ex + 2 * scale, eye_y - 6 * scale, ex + 7 * scale, eye_y - 1 * scale), (255, 255, 255))
-
-    # Eyebrows.
-    brow_y = cy - 44 * scale + bob
-    line(draw, [(cx - 44 * scale, brow_y), (cx - 31 * scale, brow_y - 9 * scale), (cx - 18 * scale, brow_y - 5 * scale)], (26, 20, 19), width=2 * scale)
-    line(draw, [(cx + 18 * scale, brow_y - 5 * scale), (cx + 31 * scale, brow_y - 9 * scale), (cx + 44 * scale, brow_y)], (26, 20, 19), width=2 * scale)
+            line(draw, [(ex - 16 * scale, eye_y - 3 * scale), (ex + 14 * scale, eye_y - 1 * scale)], (24, 27, 43), width=2 * scale)
+            ellipse(draw, (ex - 10 * scale, eye_y - 7 * scale, ex + 10 * scale, eye_y + 9 * scale), (67, 101, 143))
+            ellipse(draw, (ex - 5 * scale, eye_y - 4 * scale, ex + 5 * scale, eye_y + 7 * scale), (18, 24, 39))
+            ellipse(draw, (ex + 1 * scale, eye_y - 4 * scale, ex + 5 * scale, eye_y), (224, 242, 255))
+    brow_y = cy - 37 * scale + bob
+    line(draw, [(cx - 42 * scale, brow_y), (cx - 19 * scale, brow_y - 6 * scale)], (27, 30, 47), width=2 * scale)
+    line(draw, [(cx + 19 * scale, brow_y - 6 * scale), (cx + 42 * scale, brow_y)], (27, 30, 47), width=2 * scale)
 
     # Nose and mouth.
-    ellipse(draw, (cx - 9 * scale, cy + 4 * scale + bob, cx + 9 * scale, cy + 17 * scale + bob), (20, 18, 18))
-    mouth_y = cy + 29 * scale + bob
+    line(draw, [(cx + 2 * scale, cy - 4 * scale + bob), (cx - 2 * scale, cy + 12 * scale + bob)], (168, 141, 153), width=1 * scale)
+    mouth_y = cy + 33 * scale + bob
     if state == "speaking":
-        mh = (6 + 8 * abs(math.sin(phase * math.tau * 2))) * scale
-        ellipse(draw, (cx - 18 * scale, mouth_y - mh / 2, cx + 18 * scale, mouth_y + mh), (170, 24, 38))
+        mh = (4 + 7 * abs(math.sin(phase * math.tau * 2))) * scale
+        ellipse(draw, (cx - 10 * scale, mouth_y - mh / 2, cx + 10 * scale, mouth_y + mh), (94, 28, 48))
     elif state == "sad":
-        line(draw, [(cx - 22 * scale, mouth_y + 7 * scale), (cx, mouth_y), (cx + 22 * scale, mouth_y + 7 * scale)], (180, 30, 45), width=3 * scale)
+        line(draw, [(cx - 14 * scale, mouth_y + 4 * scale), (cx, mouth_y), (cx + 14 * scale, mouth_y + 4 * scale)], (85, 36, 57), width=2 * scale)
     else:
-        line(draw, [(cx - 26 * scale, mouth_y - 3 * scale), (cx - 12 * scale, mouth_y + 8 * scale), (cx, mouth_y + 10 * scale), (cx + 12 * scale, mouth_y + 8 * scale), (cx + 26 * scale, mouth_y - 3 * scale)], (190, 26, 42), width=3 * scale)
+        line(draw, [(cx - 14 * scale, mouth_y), (cx + 13 * scale, mouth_y - 2 * scale)], (85, 36, 57), width=2 * scale)
 
-    # Heart.
-    heart_y = cy + 91 * scale
-    heart_size = (21 + (pulse * 2 if state == "speaking" else 0)) * scale
-    ellipse(draw, (cx - heart_size, heart_y - heart_size, cx, heart_y), (216, 18, 35))
-    ellipse(draw, (cx, heart_y - heart_size, cx + heart_size, heart_y), (216, 18, 35))
-    draw.polygon([(cx - heart_size, heart_y - heart_size / 2), (cx + heart_size, heart_y - heart_size / 2), (cx, heart_y + heart_size * 1.15)], fill=(216, 18, 35))
+    # Blue rose tie.
+    rose_x = cx
+    rose_y = cy + 82 * scale
+    rose_color = (35, 83, 142)
+    for i in range(6):
+        angle = i * math.tau / 6 + phase * 0.15
+        px = rose_x + math.cos(angle) * 7 * scale
+        py = rose_y + math.sin(angle) * 5 * scale
+        ellipse(draw, (px - 7 * scale, py - 5 * scale, px + 7 * scale, py + 5 * scale), rose_color)
+    ellipse(draw, (rose_x - 5 * scale, rose_y - 5 * scale, rose_x + 5 * scale, rose_y + 5 * scale), (23, 43, 86))
+    draw.polygon([(cx - 9 * scale, rose_y + 9 * scale), (cx, h + 5 * scale), (cx + 9 * scale, rose_y + 9 * scale)], fill=(11, 14, 28))
+
+    name_font = load_font(10 * scale, bold=True)
+    draw.text((12 * scale, h - 23 * scale), "Ado", fill=(116, 178, 245), font=name_font)
 
     # Status marker.
     status_colors = {

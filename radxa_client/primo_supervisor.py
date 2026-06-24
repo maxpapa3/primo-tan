@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Always-on button supervisor for Primo-tan.
+"""Always-on button supervisor for the AI mascot.
 
 Double-click toggles mascot mode. While active, holding the button records speech.
-When the camera view changes enough, Primo-tan may comment on what she sees.
+When the camera view changes enough, the mascot may comment on what she sees.
 """
 
 from __future__ import annotations
@@ -59,12 +59,12 @@ class PrimoSupervisor:
             return
         self.active = active
         if active:
-            print("Primo-tan ON", flush=True)
+            print("Ado-style mascot ON", flush=True)
             console_mode("mascot")
             start_face("idle", True)
             self.reset_visual_watch()
         else:
-            print("Primo-tan OFF", flush=True)
+            print("Ado-style mascot OFF", flush=True)
             self.cancel_recording()
             self.reset_visual_watch(clear_sample=True)
             stop_face()
@@ -76,11 +76,11 @@ class PrimoSupervisor:
             console_mode("mascot")
             start_face("idle", True)
             self.reset_visual_watch()
-            print("Primo-tan ON", flush=True)
+            print("Ado-style mascot ON", flush=True)
         else:
             stop_face()
             console_mode("console")
-            print("Primo-tan OFF", flush=True)
+            print("Ado-style mascot OFF", flush=True)
 
     def toggle(self) -> None:
         self.set_active(not self.active)
@@ -331,7 +331,7 @@ class PrimoSupervisor:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Always-on Primo-tan button supervisor.")
+    parser = argparse.ArgumentParser(description="Always-on AI mascot button supervisor.")
     parser.add_argument("--server", required=True)
     parser.add_argument("--gpio-chip", type=int, default=3)
     parser.add_argument("--gpio-line", type=int, default=1)

@@ -1,7 +1,7 @@
-# プリモたん AI Communication Device
+# Ado-style AI Communication Device
 
-Mac miniを頭脳、Radxa Zero 3Wを小型表示・音声端末として使うコミュニケーションデバイス「プリモたん」の実験実装です。
-プリモたんは、敬語を使わない幼い女の子のような口調で、短くやわらかく話します。
+Mac miniを頭脳、Radxa Zero 3Wを小型表示・音声端末として使う、Adoの雰囲気を連想する非公式AIマスコットの実験実装です。
+実在の歌い手Ado本人や公式キャラクターではありません。LCDには黒髪・青薔薇・暗色衣装のオリジナル歌い手風アイコンを描画します。
 
 ```text
 Telegram / cron / X
@@ -139,9 +139,9 @@ mac_mini/run_openclaw_server.sh
 
 Radxa側で `--no-play` を外すと、返ってきた `audio_url` をダウンロードして再生します。
 録音後はまずSTT結果をLCD上部の「質問」に表示し、その後、読み上げ中と読み上げ後の待機画面ではLCD下部の「返答」にAIの返答テキストを表示します。
-AIマスコット起動中は、LCD右側にRaspiカメラの最新フレームを小窓表示します。会話時はその最新フレームもMac miniへ送り、プリモたんの返答に映像から感じ取った雰囲気を自然に混ぜます。カメラはデフォルトで `/dev/video0` を使い、必要ならRadxa側サービスの環境変数 `PRIMO_CAMERA_DEVICE` や `PRIMO_CAMERA_ROTATE` で調整できます。
+AIマスコット起動中は、LCD右側にRaspiカメラの最新フレームを小窓表示します。会話時はその最新フレームもMac miniへ送り、Ado風マスコットの返答に映像から感じ取った雰囲気を自然に混ぜます。カメラはデフォルトで `/dev/video0` を使い、必要ならRadxa側サービスの環境変数 `PRIMO_CAMERA_DEVICE` や `PRIMO_CAMERA_ROTATE` で調整できます。
 
-## プリモたんに話しかける
+## Ado風マスコットに話しかける
 
 固定秒数録音でまず試す場合:
 
@@ -168,16 +168,16 @@ scripts/status_radxa_voice_client.sh
 起動後はWhisplay HATのボタンで操作できます。
 
 ```text
-ダブルクリック: プリモたんON/OFF切り替え
+ダブルクリック: AIマスコットON/OFF切り替え
 トリプルクリック: ON/OFFに関わらずシャットダウン確認
 ON中に約0.45秒以上長押し: 押している間だけ録音、離すと返答
 OFF中: コンソール画面を表示
-ON中: コンソールを消してプリモたんの顔だけ表示
+ON中: コンソールを消してAdo風アイコンだけ表示
 ```
 
 トリプルクリックすると「シャットダウンしますか？」と聞きます。続けて「はい」と言った場合だけRadxaをシャットダウンします。無言や「いいえ」などの場合はシャットダウンしません。
 
-プリモたんON中は、録音していない間にカメラ画像を常時見ています。映像に一定以上の変化が起きた時だけ、見えたものについて短くつぶやきます。
+AIマスコットON中は、録音していない間にカメラ画像を常時見ています。映像に一定以上の変化が起きた時だけ、見えたものについて短くつぶやきます。
 検知感度や再発話までの待ち時間はRadxa側の `primo_supervisor.py` に渡す引数で調整できます。
 
 ```bash
@@ -196,11 +196,11 @@ python3 primo_supervisor.py \
 scripts/stop_radxa_voice_client.sh
 ```
 
-`setup_radxa_console_mode.sh` は初回だけ実行します。プリモたん起動中はRadxaのfbcon/ttyを `/dev/fb0` から外して顔だけ表示し、停止時にコンソール表示を戻します。
+`setup_radxa_console_mode.sh` は初回だけ実行します。AIマスコット起動中はRadxaのfbcon/ttyを `/dev/fb0` から外して顔だけ表示し、停止時にコンソール表示を戻します。
 
 ## 顔アニメーション
 
-Radxa側の [radxa_client/face_display.py](radxa_client/face_display.py) が `/dev/fb0` に直接RGB565でプリモたんの顔を描画します。
+Radxa側の [radxa_client/face_display.py](radxa_client/face_display.py) が `/dev/fb0` に直接RGB565でAdo風アイコンを描画します。
 
 状態:
 
@@ -244,7 +244,7 @@ python3 voice_client.py \
 
 ## 常駐化
 
-Mac mini起動時にプリモたんAPIを自動起動する場合:
+Mac mini起動時にAIマスコットAPIを自動起動する場合:
 
 ```bash
 scripts/install_mascot_launch_agent.sh
@@ -265,7 +265,7 @@ Radxa起動時にボタン監視を自動起動する場合:
 scripts/install_radxa_mascot_service.sh
 ```
 
-このサービスは起動直後はOFF状態で待機します。Whisplay HATのボタンをダブルクリックすると、コンソール画面を消してプリモたんの顔を表示します。
+このサービスは起動直後はOFF状態で待機します。Whisplay HATのボタンをダブルクリックすると、コンソール画面を消してAdo風アイコンを表示します。
 
 Radxa側の状態確認:
 

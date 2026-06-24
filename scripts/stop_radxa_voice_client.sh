@@ -20,4 +20,4 @@ ssh -i "$RADXA_KEY" "$RADXA_USER@$RADXA_HOST" \
 ssh -i "$RADXA_KEY" "$RADXA_USER@$RADXA_HOST" \
   "printf '%s\n' '$RADXA_SUDO_PASSWORD' | sudo -S /usr/local/sbin/primo-console-mode console"
 
-echo "stopped Primo-tan supervisor"
+echo "stopped AI mascot supervisor"

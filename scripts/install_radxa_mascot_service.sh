@@ -19,7 +19,7 @@ ssh -i "$RADXA_KEY" "$RADXA_USER@$RADXA_HOST" "chmod +x '$REMOTE_DIR/'*.py"
 
 ssh -i "$RADXA_KEY" "$RADXA_USER@$RADXA_HOST" "cat > /tmp/$SERVICE_NAME" <<EOF
 [Unit]
-Description=Primo-tan AI mascot button supervisor
+Description=AI mascot button supervisor
 After=network-online.target sound.target
 Wants=network-online.target
 

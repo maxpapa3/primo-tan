@@ -24,5 +24,5 @@ else
     "cd '$REMOTE_DIR' && nohup python3 -u primo_supervisor.py --server 'http://${MAC_HOST}:8765' --start-inactive > voice_client.log 2>&1 < /dev/null &"
 fi
 
-echo "started Primo-tan supervisor"
+echo "started AI mascot supervisor"
 echo "log: ssh -i $RADXA_KEY $RADXA_USER@$RADXA_HOST 'tail -f $REMOTE_DIR/voice_client.log'"
