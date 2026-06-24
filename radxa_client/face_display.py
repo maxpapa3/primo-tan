@@ -266,7 +266,7 @@ def draw_plush_eye(draw: ImageDraw.ImageDraw, ex: float, eye_y: float, side: int
     # Large stitched iris.
     ellipse(draw, (ex - 15 * scale, eye_y - 13 * scale, ex + 15 * scale, eye_y + 15 * scale), iris_dark)
     ellipse(draw, (ex - 11 * scale, eye_y - 11 * scale, ex + 11 * scale, eye_y + 12 * scale), iris)
-    ellipse(draw, (ex - 4 * scale, eye_y - 10 * scale, ex + 5 * scale, eye_y + 10 * scale), outline)
+    ellipse(draw, (ex - 3 * scale, eye_y - 8 * scale, ex + 3 * scale, eye_y + 8 * scale), outline)
     ellipse(draw, (ex - 8 * scale, eye_y - 8 * scale, ex - 3 * scale, eye_y - 4 * scale), highlight)
     ellipse(draw, (ex + 5 * scale, eye_y + 5 * scale, ex + 9 * scale, eye_y + 9 * scale), (170, 235, 245))
 
@@ -283,14 +283,25 @@ def draw_plush_eye(draw: ImageDraw.ImageDraw, ex: float, eye_y: float, side: int
     )
     line(draw, [(ex - 22 * scale, eye_y - 8 * scale), (ex + 20 * scale, eye_y - 7 * scale)], lash, width=2 * scale)
 
-    # Lower lashes and plush stitch dots.
+    # Lower lashes.
     for offset in (-17, -5, 8, 19):
         lx = ex + offset * scale
         line(draw, [(lx, eye_y + 16 * scale), (lx + side * 4 * scale, eye_y + 24 * scale)], lash, width=1 * scale)
-    for dx, dy in [(-25, 17), (-20, 26), (22, 16), (27, 24)]:
-        dot_x = ex + dx * scale
-        dot_y = eye_y + dy * scale
-        ellipse(draw, (dot_x - 1.4 * scale, dot_y - 1.4 * scale, dot_x + 1.4 * scale, dot_y + 1.4 * scale), lash)
+
+
+def draw_background_rose(draw: ImageDraw.ImageDraw, cx: float, cy: float, scale: int, alpha: float = 1.0) -> None:
+    petal = (int(35 * alpha), int(86 * alpha), int(128 * alpha))
+    center = (int(18 * alpha), int(43 * alpha), int(74 * alpha))
+    line_color = (int(57 * alpha), int(118 * alpha), int(164 * alpha))
+    radius = 8 * scale
+    for i in range(7):
+        angle = i * math.tau / 7
+        px = cx + math.cos(angle) * radius * 0.55
+        py = cy + math.sin(angle) * radius * 0.45
+        ellipse(draw, (px - 5 * scale, py - 4 * scale, px + 5 * scale, py + 4 * scale), petal)
+    ellipse(draw, (cx - 3 * scale, cy - 3 * scale, cx + 3 * scale, cy + 3 * scale), center)
+    line(draw, [(cx + 5 * scale, cy + 6 * scale), (cx + 14 * scale, cy + 17 * scale)], line_color, width=1 * scale)
+    line(draw, [(cx + 9 * scale, cy + 11 * scale), (cx + 17 * scale, cy + 8 * scale)], line_color, width=1 * scale)
 
 
 def draw_face(
@@ -322,6 +333,13 @@ def draw_face(
         sx = int((i * 37 + 19) % max(1, w))
         sy = int((i * 53 + 31) % max(1, h))
         ellipse(draw, (sx - 1 * scale, sy - 1 * scale, sx + 1 * scale, sy + 1 * scale), (58, 92, 132))
+    for rx, ry, rose_scale in (
+        (34 * scale, 48 * scale, 3),
+        (222 * scale, 43 * scale, 3),
+        (238 * scale, 166 * scale, 2),
+        (42 * scale, 179 * scale, 2),
+    ):
+        draw_background_rose(draw, rx, ry, rose_scale, alpha=1.0)
 
     pulse = 0.5 + 0.5 * math.sin(phase * math.tau)
     bob = math.sin(phase * math.tau) * 5 * scale
@@ -425,7 +443,7 @@ def draw_face(
     # Large plush-style embroidered eyes and brows.
     eye_y = cy - 13 * scale + bob
     for side in (-1, 1):
-        ex = cx + side * 27 * scale
+        ex = cx + side * 31 * scale
         draw_plush_eye(draw, ex, eye_y, side, scale, blink)
     brow_y = cy - 47 * scale + bob
     line(draw, [(cx - 44 * scale, brow_y), (cx - 20 * scale, brow_y - 7 * scale)], (18, 21, 36), width=2 * scale)
