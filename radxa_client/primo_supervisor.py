@@ -2,12 +2,12 @@
 """Always-on button supervisor for Primo-tan.
 
 Double-click toggles mascot mode. While active, holding the button records speech.
+When the camera view changes enough, Primo-tan may comment on what she sees.
 """
 
 from __future__ import annotations
 
 import argparse
-import random
 import subprocess
 import sys
 import tempfile
@@ -15,12 +15,15 @@ import threading
 import time
 from pathlib import Path
 
+from PIL import Image
+
 from voice_client import (
+    CAMERA_IMAGE,
     display_and_play_reply,
     gpio_value_reader,
     post_json,
     send_and_play,
-    send_spontaneous,
+    send_visual_change,
     start_face,
     start_recording,
     stop_camera,
@@ -45,8 +48,10 @@ class PrimoSupervisor:
         self.recording_path: Path | None = None
         self.press_started_at = 0.0
         self.hold_recording_started = False
-        self.monologue_thread: threading.Thread | None = None
-        self.next_monologue_at = 0.0
+        self.visual_thread: threading.Thread | None = None
+        self.next_visual_check_at = 0.0
+        self.last_visual_sample: bytes | None = None
+        self.last_visual_monologue_at = 0.0
         self.shutdown_confirming = False
 
     def set_active(self, active: bool) -> None:
@@ -57,11 +62,11 @@ class PrimoSupervisor:
             print("Primo-tan ON", flush=True)
             console_mode("mascot")
             start_face("idle", True)
-            self.schedule_next_monologue(initial=True)
+            self.reset_visual_watch()
         else:
             print("Primo-tan OFF", flush=True)
             self.cancel_recording()
-            self.next_monologue_at = 0.0
+            self.reset_visual_watch(clear_sample=True)
             stop_face()
             stop_camera()
             console_mode("console")
@@ -70,7 +75,7 @@ class PrimoSupervisor:
         if self.active:
             console_mode("mascot")
             start_face("idle", True)
-            self.schedule_next_monologue(initial=True)
+            self.reset_visual_watch()
             print("Primo-tan ON", flush=True)
         else:
             stop_face()
@@ -91,58 +96,77 @@ class PrimoSupervisor:
         self.recording_path = None
         self.hold_recording_started = False
 
-    def monologue_enabled(self) -> bool:
-        return (
-            not self.args.no_monologue
-            and self.args.monologue_min_seconds > 0
-            and self.args.monologue_max_seconds > 0
-        )
+    def visual_watch_enabled(self) -> bool:
+        return not self.args.no_visual_watch and self.args.visual_watch_interval > 0
 
-    def monologue_running(self) -> bool:
-        return self.monologue_thread is not None and self.monologue_thread.is_alive()
+    def visual_monologue_running(self) -> bool:
+        return self.visual_thread is not None and self.visual_thread.is_alive()
 
-    def schedule_next_monologue(self, initial: bool = False) -> None:
-        if not self.active or not self.monologue_enabled():
-            self.next_monologue_at = 0.0
+    def reset_visual_watch(self, clear_sample: bool = False) -> None:
+        if clear_sample:
+            self.last_visual_sample = None
+            self.last_visual_monologue_at = 0.0
+        if not self.active or not self.visual_watch_enabled():
+            self.next_visual_check_at = 0.0
             return
-        minimum = min(self.args.monologue_min_seconds, self.args.monologue_max_seconds)
-        maximum = max(self.args.monologue_min_seconds, self.args.monologue_max_seconds)
-        delay = random.uniform(minimum, maximum)
-        if initial:
-            delay = min(delay, max(10.0, minimum))
-        self.next_monologue_at = time.monotonic() + delay
+        self.next_visual_check_at = time.monotonic() + self.args.visual_watch_interval
 
-    def start_spontaneous_monologue(self) -> None:
-        if not self.active or self.monologue_running():
+    def visual_sample(self) -> bytes | None:
+        if not CAMERA_IMAGE.exists():
+            return None
+        try:
+            with Image.open(CAMERA_IMAGE) as image:
+                return image.convert("L").resize((32, 24)).tobytes()
+        except Exception as exc:
+            print(f"camera sample failed: {exc}", flush=True)
+            return None
+
+    def visual_change_score(self, sample: bytes) -> float:
+        previous = self.last_visual_sample
+        if previous is None or len(previous) != len(sample):
+            self.last_visual_sample = sample
+            return 0.0
+        total = sum(abs(a - b) for a, b in zip(previous, sample))
+        self.last_visual_sample = sample
+        return total / len(sample)
+
+    def start_visual_monologue(self, score: float) -> None:
+        if not self.active or self.visual_monologue_running():
             return
 
         def run() -> None:
             try:
-                print("Spontaneous monologue...", flush=True)
-                send_spontaneous(self.args.server, self.args.playback_device, self.args.no_play, True)
+                print(f"Visual change monologue... score={score:.1f}", flush=True)
+                send_visual_change(self.args.server, self.args.playback_device, self.args.no_play, True, score)
             finally:
-                self.schedule_next_monologue()
+                self.last_visual_monologue_at = time.monotonic()
+                self.reset_visual_watch()
 
-        self.monologue_thread = threading.Thread(target=run, daemon=True)
-        self.monologue_thread.start()
+        self.visual_thread = threading.Thread(target=run, daemon=True)
+        self.visual_thread.start()
 
-    def maybe_start_spontaneous_monologue(self, button_value: int, now: float) -> None:
-        if (
-            self.active
-            and button_value == 0
-            and self.recording_process is None
-            and not self.hold_recording_started
-            and not self.shutdown_confirming
-            and not self.monologue_running()
-            and self.next_monologue_at > 0
-            and now >= self.next_monologue_at
-        ):
-            self.start_spontaneous_monologue()
+    def maybe_start_visual_monologue(self, button_value: int, now: float) -> None:
+        if not self.active or not self.visual_watch_enabled() or self.next_visual_check_at <= 0 or now < self.next_visual_check_at:
+            return
+        self.next_visual_check_at = now + self.args.visual_watch_interval
+        if button_value != 0 or self.recording_process is not None or self.hold_recording_started:
+            return
+        if self.shutdown_confirming or self.visual_monologue_running():
+            return
+        if now - self.last_visual_monologue_at < self.args.visual_change_cooldown:
+            return
+
+        sample = self.visual_sample()
+        if sample is None:
+            return
+        score = self.visual_change_score(sample)
+        if score >= self.args.visual_change_threshold:
+            self.start_visual_monologue(score)
 
     def start_hold_recording(self) -> None:
-        if not self.active or self.shutdown_confirming or self.recording_process is not None or self.monologue_running():
+        if not self.active or self.shutdown_confirming or self.recording_process is not None or self.visual_monologue_running():
             return
-        self.schedule_next_monologue()
+        self.reset_visual_watch()
         self.reset_clicks()
         tmpdir = tempfile.TemporaryDirectory()
         # Keep a reference on the object via the process so the directory survives.
@@ -206,7 +230,7 @@ class PrimoSupervisor:
         was_active = self.active
         self.shutdown_confirming = True
         self.cancel_recording()
-        self.next_monologue_at = 0.0
+        self.reset_visual_watch(clear_sample=True)
         print("Shutdown confirmation requested", flush=True)
         try:
             if not was_active:
@@ -233,7 +257,7 @@ class PrimoSupervisor:
             self.reset_clicks()
             if was_active:
                 start_face("idle", True)
-                self.schedule_next_monologue(initial=True)
+                self.reset_visual_watch()
             else:
                 stop_face()
                 stop_camera()
@@ -280,7 +304,7 @@ class PrimoSupervisor:
                     if value == 1:
                         self.press_started_at = now
                         self.hold_recording_started = False
-                        self.schedule_next_monologue()
+                        self.reset_visual_watch()
                     else:
                         self.handle_release()
 
@@ -294,7 +318,7 @@ class PrimoSupervisor:
 
                 if value == 0:
                     self.maybe_finish_click_sequence(now)
-                self.maybe_start_spontaneous_monologue(value, now)
+                self.maybe_start_visual_monologue(value, now)
                 time.sleep(0.01)
         finally:
             self.cancel_recording()
@@ -319,9 +343,13 @@ def main() -> None:
     parser.add_argument("--click-max-seconds", type=float, default=0.32)
     parser.add_argument("--multi-click-seconds", type=float, default=0.65)
     parser.add_argument("--shutdown-answer-seconds", type=float, default=3.0)
-    parser.add_argument("--monologue-min-seconds", type=float, default=45.0)
-    parser.add_argument("--monologue-max-seconds", type=float, default=90.0)
-    parser.add_argument("--no-monologue", action="store_true")
+    parser.add_argument("--visual-watch-interval", type=float, default=2.0)
+    parser.add_argument("--visual-change-threshold", type=float, default=18.0)
+    parser.add_argument("--visual-change-cooldown", type=float, default=90.0)
+    parser.add_argument("--no-visual-watch", action="store_true")
+    parser.add_argument("--monologue-min-seconds", type=float, default=0.0, help=argparse.SUPPRESS)
+    parser.add_argument("--monologue-max-seconds", type=float, default=0.0, help=argparse.SUPPRESS)
+    parser.add_argument("--no-monologue", dest="no_visual_watch", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--start-inactive", dest="start_active", action="store_false")
     parser.add_argument("--no-play", action="store_true")
     parser.set_defaults(start_active=True)

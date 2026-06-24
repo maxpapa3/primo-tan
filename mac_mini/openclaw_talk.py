@@ -267,7 +267,9 @@ def main() -> int:
     meta = payload.get("meta", {})
     if not isinstance(meta, dict):
         meta = {}
-    spontaneous = meta.get("source") == "spontaneous"
+    source = meta.get("source")
+    spontaneous = source in {"spontaneous", "visual_change"}
+    visual_change = source == "visual_change"
     if meta.get("source") == "shutdown_confirm":
         text = "シャットダウンする？ はい、って言ったら電源きるね。"
         spoken_text = speech_text(text)
@@ -297,7 +299,16 @@ def main() -> int:
         "むずかしい言葉は避けて、短く、素直に、あたたかく話してください。"
         "操作説明や内部事情は不要です。"
     )
-    if spontaneous:
+    if visual_change:
+        prompt = (
+            f"{persona}"
+            "これはカメラ映像に何か変化があった場面です。"
+            "画像を見て、変化や気づいたことからプリモたんが思ったことを、幼い独り言として1文だけ話してください。"
+            "大げさに驚かず、見えていることを断定しすぎず、自然につぶやいてください。敬語は使わないでください。"
+            f"{vision_instruction}\n\n"
+            f"きっかけ: {user_text}"
+        )
+    elif spontaneous:
         prompt = (
             f"{persona}"
             "これはユーザーからの質問ではなく、プリモたんが自分から小さくつぶやく場面です。"

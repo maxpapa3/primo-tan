@@ -370,7 +370,29 @@ def send_spontaneous(server: str, playback_device: str | None, no_play: bool, fa
     except URLError as exc:
         print(f"cannot reach server: {exc.reason}", file=sys.stderr)
         return 1
+    except Exception as exc:
+        print(f"spontaneous talk failed: {exc}", file=sys.stderr)
+        return 1
     return display_and_play_reply(reply, "ひとりごと", playback_device, no_play, face)
+
+
+def send_visual_change(server: str, playback_device: str | None, no_play: bool, face: bool, score: float) -> int:
+    base_url = server.rstrip("/") + "/"
+    talk_url = urljoin(base_url, "talk")
+    prompt = "カメラの映像に変化があったよ。見えているものを見て、短く自然につぶやいて。"
+    meta = {"source": "visual_change", "client": "radxa", "camera": "raspi", "change_score": round(score, 2)}
+    try:
+        reply = post_json(talk_url, talk_payload(prompt, meta))
+    except HTTPError as exc:
+        print(f"server returned HTTP {exc.code}", file=sys.stderr)
+        return 1
+    except URLError as exc:
+        print(f"cannot reach server: {exc.reason}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"visual change talk failed: {exc}", file=sys.stderr)
+        return 1
+    return display_and_play_reply(reply, "みえたこと", playback_device, no_play, face)
 
 
 def send_and_play(server: str, wav_path: Path, playback_device: str | None, no_play: bool, face: bool) -> int:

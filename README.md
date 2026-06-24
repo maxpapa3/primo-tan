@@ -177,17 +177,18 @@ ON中: コンソールを消してプリモたんの顔だけ表示
 
 トリプルクリックすると「シャットダウンしますか？」と聞きます。続けて「はい」と言った場合だけRadxaをシャットダウンします。無言や「いいえ」などの場合はシャットダウンしません。
 
-プリモたんON中は、録音していないアイドル時間に約45〜90秒間隔で短い独り言を話します。カメラ画像が取れていれば、見えているものから感じたことも自然に混ぜます。
-頻度を変える場合はRadxa側の `primo_supervisor.py` に渡す引数で調整できます。
+プリモたんON中は、録音していない間にカメラ画像を常時見ています。映像に一定以上の変化が起きた時だけ、見えたものについて短くつぶやきます。
+検知感度や再発話までの待ち時間はRadxa側の `primo_supervisor.py` に渡す引数で調整できます。
 
 ```bash
 python3 primo_supervisor.py \
   --server http://<Mac miniのIP>:8765 \
-  --monologue-min-seconds 30 \
-  --monologue-max-seconds 60
+  --visual-watch-interval 2 \
+  --visual-change-threshold 18 \
+  --visual-change-cooldown 90
 ```
 
-止めたい場合は `--no-monologue` を付けます。
+止めたい場合は `--no-visual-watch` を付けます。
 
 停止:
 
