@@ -230,12 +230,12 @@ def draw_plush_eye(draw: ImageDraw.ImageDraw, ex: float, eye_y: float, side: int
 
     # Angular embroidered eye outline.
     points = [
-        (ex - 22 * scale, eye_y - 15 * scale),
-        (ex - 6 * scale, eye_y - 23 * scale),
-        (ex + 20 * scale, eye_y - 17 * scale),
-        (ex + 23 * scale, eye_y + 6 * scale),
-        (ex + 8 * scale, eye_y + 21 * scale),
-        (ex - 18 * scale, eye_y + 17 * scale),
+        (ex - 23 * scale, eye_y - 10 * scale),
+        (ex - 7 * scale, eye_y - 17 * scale),
+        (ex + 21 * scale, eye_y - 12 * scale),
+        (ex + 23 * scale, eye_y + 7 * scale),
+        (ex + 9 * scale, eye_y + 17 * scale),
+        (ex - 18 * scale, eye_y + 14 * scale),
         (ex - 25 * scale, eye_y - 2 * scale),
     ]
     draw.polygon(points, fill=(216, 235, 239), outline=outline)
@@ -245,36 +245,49 @@ def draw_plush_eye(draw: ImageDraw.ImageDraw, ex: float, eye_y: float, side: int
     line(
         draw,
         [
-            (ex - 25 * scale, eye_y - 18 * scale),
-            (ex - 8 * scale, eye_y - 26 * scale),
-            (ex + 23 * scale, eye_y - 19 * scale),
+            (ex - 26 * scale, eye_y - 13 * scale),
+            (ex - 8 * scale, eye_y - 21 * scale),
+            (ex + 24 * scale, eye_y - 14 * scale),
         ],
         lash,
-        width=4 * scale,
+        width=5 * scale,
     )
     line(
         draw,
         [
-            (ex - 17 * scale, eye_y - 27 * scale),
-            (ex - 3 * scale, eye_y - 30 * scale),
-            (ex + 16 * scale, eye_y - 25 * scale),
+            (ex - 17 * scale, eye_y - 22 * scale),
+            (ex - 3 * scale, eye_y - 25 * scale),
+            (ex + 16 * scale, eye_y - 20 * scale),
         ],
         accent,
         width=1 * scale,
     )
 
     # Large stitched iris.
-    ellipse(draw, (ex - 15 * scale, eye_y - 17 * scale, ex + 15 * scale, eye_y + 18 * scale), iris_dark)
-    ellipse(draw, (ex - 11 * scale, eye_y - 14 * scale, ex + 11 * scale, eye_y + 15 * scale), iris)
-    ellipse(draw, (ex - 4 * scale, eye_y - 12 * scale, ex + 5 * scale, eye_y + 13 * scale), outline)
-    ellipse(draw, (ex - 8 * scale, eye_y - 10 * scale, ex - 3 * scale, eye_y - 5 * scale), highlight)
-    ellipse(draw, (ex + 5 * scale, eye_y + 7 * scale, ex + 9 * scale, eye_y + 11 * scale), (170, 235, 245))
+    ellipse(draw, (ex - 15 * scale, eye_y - 13 * scale, ex + 15 * scale, eye_y + 15 * scale), iris_dark)
+    ellipse(draw, (ex - 11 * scale, eye_y - 11 * scale, ex + 11 * scale, eye_y + 12 * scale), iris)
+    ellipse(draw, (ex - 4 * scale, eye_y - 10 * scale, ex + 5 * scale, eye_y + 10 * scale), outline)
+    ellipse(draw, (ex - 8 * scale, eye_y - 8 * scale, ex - 3 * scale, eye_y - 4 * scale), highlight)
+    ellipse(draw, (ex + 5 * scale, eye_y + 5 * scale, ex + 9 * scale, eye_y + 9 * scale), (170, 235, 245))
+
+    # Heavy plush eyelid shadow: makes the eye large but not wide open.
+    draw.polygon(
+        [
+            (ex - 24 * scale, eye_y - 14 * scale),
+            (ex - 6 * scale, eye_y - 21 * scale),
+            (ex + 23 * scale, eye_y - 14 * scale),
+            (ex + 14 * scale, eye_y - 8 * scale),
+            (ex - 12 * scale, eye_y - 11 * scale),
+        ],
+        fill=lash,
+    )
+    line(draw, [(ex - 22 * scale, eye_y - 8 * scale), (ex + 20 * scale, eye_y - 7 * scale)], lash, width=2 * scale)
 
     # Lower lashes and plush stitch dots.
     for offset in (-17, -5, 8, 19):
         lx = ex + offset * scale
-        line(draw, [(lx, eye_y + 19 * scale), (lx + side * 4 * scale, eye_y + 27 * scale)], lash, width=1 * scale)
-    for dx, dy in [(-25, 20), (-20, 29), (22, 18), (27, 27)]:
+        line(draw, [(lx, eye_y + 16 * scale), (lx + side * 4 * scale, eye_y + 24 * scale)], lash, width=1 * scale)
+    for dx, dy in [(-25, 17), (-20, 26), (22, 16), (27, 24)]:
         dot_x = ex + dx * scale
         dot_y = eye_y + dy * scale
         ellipse(draw, (dot_x - 1.4 * scale, dot_y - 1.4 * scale, dot_x + 1.4 * scale, dot_y + 1.4 * scale), lash)
