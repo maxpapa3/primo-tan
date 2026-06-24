@@ -266,7 +266,7 @@ def draw_plush_eye(draw: ImageDraw.ImageDraw, ex: float, eye_y: float, side: int
     # Large stitched iris.
     ellipse(draw, (ex - 15 * scale, eye_y - 13 * scale, ex + 15 * scale, eye_y + 15 * scale), iris_dark)
     ellipse(draw, (ex - 11 * scale, eye_y - 11 * scale, ex + 11 * scale, eye_y + 12 * scale), iris)
-    ellipse(draw, (ex - 3 * scale, eye_y - 8 * scale, ex + 3 * scale, eye_y + 8 * scale), outline)
+    ellipse(draw, (ex - 1.5 * scale, eye_y - 4 * scale, ex + 1.5 * scale, eye_y + 4 * scale), outline)
     ellipse(draw, (ex - 8 * scale, eye_y - 8 * scale, ex - 3 * scale, eye_y - 4 * scale), highlight)
     ellipse(draw, (ex + 5 * scale, eye_y + 5 * scale, ex + 9 * scale, eye_y + 9 * scale), (170, 235, 245))
 
