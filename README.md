@@ -202,7 +202,7 @@ scripts/stop_radxa_voice_client.sh
 
 Radxa側の [radxa_client/face_display.py](radxa_client/face_display.py) が `/dev/fb0` に直接RGB565でAdo風アイコンを描画します。
 [radxa_client/assets/ado_mascot.png](radxa_client/assets/ado_mascot.png) の生成PNGを優先して表示し、画像がない環境では従来のベクター描画にフォールバックします。
-PNG表示時も、状態に合わせて体の上下揺れ・小さな傾き・瞬き・視線のきらめき・口パクを重ねてアニメーションします。
+PNG表示時は負荷を抑えるため、発話中の口パクだけを重ねてアニメーションします。
 
 状態:
 
