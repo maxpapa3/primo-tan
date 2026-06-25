@@ -341,6 +341,118 @@ def draw_state_effects(canvas: Image.Image, state: str, phase: float, scale: int
         canvas.paste(Image.blend(canvas, overlay, 0.18))
 
 
+def draw_raster_expression(
+    canvas: Image.Image,
+    state: str,
+    phase: float,
+    scale: int,
+    mascot_box: tuple[int, int, int, int],
+) -> None:
+    draw = ImageDraw.Draw(canvas)
+    x1, y1, x2, y2 = mascot_box
+    area_w = x2 - x1
+    area_h = y2 - y1
+    face = (232, 219, 184)
+    outline = (18, 22, 36)
+    iris = (102, 202, 222)
+    shine = (230, 252, 255)
+    mouth = (62, 35, 48)
+
+    eye_y = y1 + area_h * 0.48
+    eye_w = max(13 * scale, area_w * 0.13)
+    eye_h = max(7 * scale, area_h * 0.048)
+    gaze = math.sin(phase * math.tau * 0.5) * 2.4 * scale
+    blink = (state == "idle" and phase > 0.88) or (state == "thinking" and 0.46 < phase < 0.54)
+
+    for eye_x in (x1 + area_w * 0.36, x1 + area_w * 0.64):
+        if blink:
+            ellipse(
+                draw,
+                (eye_x - eye_w * 0.82, eye_y - eye_h * 1.15, eye_x + eye_w * 0.82, eye_y + eye_h * 1.10),
+                face,
+            )
+            line(
+                draw,
+                [
+                    (eye_x - eye_w * 0.58, eye_y - 1 * scale),
+                    (eye_x - eye_w * 0.15, eye_y + 1 * scale),
+                    (eye_x + eye_w * 0.58, eye_y - 1 * scale),
+                ],
+                outline,
+                width=2 * scale,
+            )
+            continue
+
+        # Small moving catchlights make the raster eyes feel alive without repainting the whole eye.
+        ellipse(
+            draw,
+            (eye_x - eye_w * 0.34 + gaze, eye_y - eye_h * 0.55, eye_x - eye_w * 0.10 + gaze, eye_y - eye_h * 0.25),
+            shine,
+        )
+        if state in {"listening", "thinking"}:
+            ellipse(
+                draw,
+                (eye_x + eye_w * 0.18 + gaze, eye_y + eye_h * 0.12, eye_x + eye_w * 0.33 + gaze, eye_y + eye_h * 0.33),
+                iris,
+            )
+
+    mouth_x = x1 + area_w * 0.50
+    mouth_y = y1 + area_h * 0.63
+    patch_w = 14 * scale
+    patch_h = 8 * scale
+    ellipse(draw, (mouth_x - patch_w, mouth_y - patch_h, mouth_x + patch_w, mouth_y + patch_h), face)
+
+    if state == "speaking":
+        open_h = (3.5 + 7.5 * abs(math.sin(phase * math.tau * 3.0))) * scale
+        open_w = 7.5 * scale
+        ellipse(draw, (mouth_x - open_w, mouth_y - open_h * 0.45, mouth_x + open_w, mouth_y + open_h), mouth)
+        ellipse(
+            draw,
+            (mouth_x - open_w * 0.45, mouth_y + open_h * 0.12, mouth_x + open_w * 0.45, mouth_y + open_h * 0.42),
+            (169, 83, 98),
+        )
+    elif state == "sad":
+        line(draw, [(mouth_x - 8 * scale, mouth_y + 3 * scale), (mouth_x, mouth_y), (mouth_x + 8 * scale, mouth_y + 3 * scale)], outline, width=2 * scale)
+    else:
+        line(draw, [(mouth_x - 8 * scale, mouth_y), (mouth_x - 2 * scale, mouth_y - 2 * scale), (mouth_x + 8 * scale, mouth_y - 1 * scale)], outline, width=2 * scale)
+
+
+def paste_animated_mascot(
+    canvas: Image.Image,
+    mascot: Image.Image,
+    mascot_box: tuple[int, int, int, int],
+    state: str,
+    phase: float,
+    scale: int,
+) -> None:
+    x1, y1, x2, y2 = mascot_box
+    target_w = x2 - x1
+    target_h = y2 - y1
+    base = fit_cover(mascot, (target_w, target_h)).convert("RGB")
+
+    bob_strength = {
+        "idle": 2.0,
+        "listening": 3.0,
+        "thinking": 1.5,
+        "speaking": 4.0,
+        "sad": 0.8,
+    }.get(state, 2.0)
+    zoom_strength = 0.006 if state != "speaking" else 0.012
+    bob = int(math.sin(phase * math.tau) * bob_strength * scale)
+    zoom = 1.0 + zoom_strength * math.sin(phase * math.tau * 2.0)
+    angle = math.sin(phase * math.tau) * (0.9 if state != "speaking" else 1.4)
+
+    work_w = max(1, int(target_w * zoom))
+    work_h = max(1, int(target_h * zoom))
+    animated = base.resize((work_w, work_h), Image.Resampling.LANCZOS)
+    animated = animated.rotate(angle, resample=Image.Resampling.BICUBIC, expand=False, fillcolor=(18, 24, 48))
+
+    paste_x = x1 + (target_w - work_w) // 2
+    paste_y = y1 + (target_h - work_h) // 2 + bob
+    canvas.paste(animated, (paste_x, paste_y))
+    draw_raster_expression(canvas, state, phase, scale, mascot_box)
+
+
 def draw_raster_face(
     width: int,
     height: int,
@@ -361,9 +473,11 @@ def draw_raster_face(
     if camera_image:
         canvas = Image.new("RGB", (w, h), (18, 24, 48))
         mascot_w = max(1, w - 97 * scale)
-        canvas.paste(fit_cover(mascot, (mascot_w, h)), (0, 0))
+        mascot_box = (0, 0, mascot_w, h)
     else:
-        canvas = fit_cover(mascot, (w, h))
+        canvas = Image.new("RGB", (w, h), (18, 24, 48))
+        mascot_box = (0, 0, w, h)
+    paste_animated_mascot(canvas, mascot, mascot_box, state, phase, scale)
     draw_state_effects(canvas, state, phase, scale, camera_image)
     draw = ImageDraw.Draw(canvas)
     status_colors = {
