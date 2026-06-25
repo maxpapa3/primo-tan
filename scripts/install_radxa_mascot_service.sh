@@ -15,6 +15,10 @@ fi
 
 ssh -i "$RADXA_KEY" "$RADXA_USER@$RADXA_HOST" "mkdir -p '$REMOTE_DIR'"
 scp -i "$RADXA_KEY" radxa_client/*.py radxa_client/*.sh "$RADXA_USER@$RADXA_HOST:$REMOTE_DIR/"
+if [[ -d radxa_client/assets ]]; then
+  ssh -i "$RADXA_KEY" "$RADXA_USER@$RADXA_HOST" "mkdir -p '$REMOTE_DIR/assets'"
+  scp -i "$RADXA_KEY" radxa_client/assets/* "$RADXA_USER@$RADXA_HOST:$REMOTE_DIR/assets/"
+fi
 ssh -i "$RADXA_KEY" "$RADXA_USER@$RADXA_HOST" "chmod +x '$REMOTE_DIR/'*.py"
 
 ssh -i "$RADXA_KEY" "$RADXA_USER@$RADXA_HOST" "cat > /tmp/$SERVICE_NAME" <<EOF

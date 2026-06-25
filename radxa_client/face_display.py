@@ -17,6 +17,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 FB_PATH = Path("/dev/fb0")
 FB_SYS = Path("/sys/class/graphics/fb0")
+MASCOT_IMAGE = Path(__file__).resolve().parent / "assets" / "ado_mascot.png"
 
 
 def read_fb_info() -> tuple[int, int, int, int]:
@@ -308,7 +309,91 @@ def draw_background_rose(draw: ImageDraw.ImageDraw, cx: float, cy: float, scale:
     line(draw, [(cx + 9 * scale, cy + 11 * scale), (cx + 17 * scale, cy + 8 * scale)], line_color, width=1 * scale)
 
 
+def draw_state_effects(canvas: Image.Image, state: str, phase: float, scale: int, camera_image: str | None) -> None:
+    draw = ImageDraw.Draw(canvas)
+    w, h = canvas.size
+    cx = w / 2 - (34 * scale if camera_image else 0)
+    cy = h / 2 - 8 * scale
+    pulse = 0.5 + 0.5 * math.sin(phase * math.tau)
+
+    if state == "listening":
+        for i in range(3):
+            radius = (67 + i * 10 + pulse * 4) * scale
+            ellipse(
+                draw,
+                (cx - radius, cy - radius, cx + radius, cy + radius),
+                fill=None,
+                outline=(70 + i * 35, 150 + i * 25, 230),
+                width=2 * scale,
+            )
+    elif state == "thinking":
+        for i in range(3):
+            dot_x = cx - 24 * scale + i * 24 * scale
+            dot_y = 28 * scale + math.sin((phase + i * 0.18) * math.tau) * 4 * scale
+            ellipse(draw, (dot_x - 4 * scale, dot_y - 4 * scale, dot_x + 4 * scale, dot_y + 4 * scale), (110, 170, 230))
+    elif state == "speaking":
+        for i in range(8):
+            bar_h = (8 + 18 * abs(math.sin((phase + i * 0.10) * math.tau))) * scale
+            x = (18 + i * 8) * scale
+            rounded_rectangle(draw, (x, h - 29 * scale - bar_h, x + 4 * scale, h - 29 * scale), 2 * scale, (70, 190, 230))
+    elif state == "sad":
+        overlay = Image.new("RGB", canvas.size, (20, 25, 42))
+        canvas.paste(Image.blend(canvas, overlay, 0.18))
+
+
+def draw_raster_face(
+    width: int,
+    height: int,
+    state: str,
+    phase: float,
+    question: str | None = None,
+    answer: str | None = None,
+    camera_image: str | None = None,
+) -> Image.Image:
+    scale = 3
+    w = width * scale
+    h = height * scale
+    try:
+        mascot = Image.open(MASCOT_IMAGE).convert("RGB")
+    except Exception:
+        return draw_vector_face(width, height, state, phase, question, answer, camera_image)
+
+    if camera_image:
+        canvas = Image.new("RGB", (w, h), (18, 24, 48))
+        mascot_w = max(1, w - 97 * scale)
+        canvas.paste(fit_cover(mascot, (mascot_w, h)), (0, 0))
+    else:
+        canvas = fit_cover(mascot, (w, h))
+    draw_state_effects(canvas, state, phase, scale, camera_image)
+    draw = ImageDraw.Draw(canvas)
+    status_colors = {
+        "idle": (130, 220, 180),
+        "listening": (80, 170, 255),
+        "thinking": (160, 130, 240),
+        "speaking": (245, 110, 135),
+        "sad": (150, 160, 180),
+    }
+    ellipse(draw, (w - 30 * scale, 13 * scale, w - 14 * scale, 29 * scale), status_colors.get(state, (130, 220, 180)))
+    draw_camera_panel(canvas, camera_image, scale)
+    draw_text_overlay(canvas, question, answer, scale)
+    return canvas.resize((width, height), Image.Resampling.LANCZOS)
+
+
 def draw_face(
+    width: int,
+    height: int,
+    state: str,
+    phase: float,
+    question: str | None = None,
+    answer: str | None = None,
+    camera_image: str | None = None,
+) -> Image.Image:
+    if MASCOT_IMAGE.exists():
+        return draw_raster_face(width, height, state, phase, question, answer, camera_image)
+    return draw_vector_face(width, height, state, phase, question, answer, camera_image)
+
+
+def draw_vector_face(
     width: int,
     height: int,
     state: str,
